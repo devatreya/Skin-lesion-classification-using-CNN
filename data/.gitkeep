@@ -1,0 +1,11 @@
+# This file ensures the data directory is tracked by Git
+# The actual dataset files are ignored due to their large size
+# 
+# To download the dataset:
+# 1. Go to https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000
+# 2. Download the dataset
+# 3. Extract to this directory with the following structure:
+#    data/
+#    ├── HAM10000_images_part_1/
+#    ├── HAM10000_images_part_2/
+#    └── HAM10000_metadata.csv
