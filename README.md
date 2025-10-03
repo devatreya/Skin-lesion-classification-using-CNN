@@ -26,7 +26,10 @@ Skin-lesion-classification-using-CNN/
 │       └── attention_maps.py      # Attention visualization
 ├── scripts/                        # Executable scripts
 │   ├── download_data.py           # Data download
-│   └── train_model.py             # Training script
+│   ├── prepare_data_split.py      # Lesion-level data splitting
+│   ├── train_model.py             # Training orchestration
+│   ├── tune_threshold.py          # Threshold optimization
+│   └── infer.py                   # Production inference
 ├── outputs/                        # Training outputs
 │   ├── models/                    # Saved models
 │   ├── logs/                      # Training logs
@@ -62,22 +65,62 @@ python3 scripts/download_data.py
 
 **Note**: You'll need to download the dataset manually from [Kaggle](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000) and place it in the `data/` folder.
 
-### 3. Data Exploration
+### 3. Prepare Lesion-Level Split
+
+```bash
+# Create stratified train/val/test split (70/15/15) by lesion_id
+python3 scripts/prepare_data_split.py
+```
+
+This creates `data/labels_binary_split.csv` and `data/split_metadata.json`.
+
+### 4. Data Exploration (Optional)
 
 ```bash
 # Analyze dataset characteristics
 python3 src/preprocessing/data_exploration.py
 ```
 
-### 4. Train Model
+### 5. Train Model
 
 ```bash
-# Train with default ResNet50 architecture
-python3 scripts/train_model.py --architecture resnet50 --epochs 50
+# Quick test (3 epochs, SimpleCNN)
+python3 scripts/train_model.py --architecture simple_cnn --epochs 3 --batch_size 32
+
+# Full training (ResNet50, 20 epochs) - RECOMMENDED
+python3 scripts/train_model.py --architecture resnet50 --epochs 20 --batch_size 32
 
 # Train with different architectures
-python3 scripts/train_model.py --architecture vgg16 --epochs 30
-python3 scripts/train_model.py --architecture simple_cnn --epochs 40
+python3 scripts/train_model.py --architecture vgg16 --epochs 20
+python3 scripts/train_model.py --architecture efficientnet --epochs 20
+```
+
+### 6. Tune Classification Threshold
+
+```bash
+# Find optimal threshold for 90% sensitivity (clinical target)
+python3 scripts/tune_threshold.py --run_dir outputs --target_sensitivity 0.90
+```
+
+This generates `outputs/threshold.json` with optimal operating point.
+
+### 7. Run Inference
+
+```bash
+# Single image prediction
+python3 scripts/infer.py \
+  --model outputs/models/resnet50_final.h5 \
+  --config outputs/training_config.json \
+  --threshold outputs/threshold.json \
+  --image test_image.jpg
+
+# Batch prediction
+python3 scripts/infer.py \
+  --model outputs/models/resnet50_final.h5 \
+  --config outputs/training_config.json \
+  --threshold outputs/threshold.json \
+  --image_dir test_images/ \
+  --output predictions.csv
 ```
 
 ### 5. Evaluate Model
