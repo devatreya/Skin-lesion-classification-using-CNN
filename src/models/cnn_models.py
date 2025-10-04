@@ -16,49 +16,33 @@ class SkinLesionCNN:
     """
     
     def __init__(self, input_shape=(224, 224, 3), num_classes=2, 
-                 architecture='resnet50', pretrained=True):
+                 architecture='resnet50', pretrained=True, learning_rate=0.0001,
+                 pos_weight=None, binary_classification=True):
         """
         Initialize the CNN model.
         
         Args:
             input_shape: Input image shape (height, width, channels)
             num_classes: Number of output classes (2 for binary)
-            architecture: Model architecture ('resnet50', 'vgg16', 'inception_v3', 
-                         'efficientnet', 'simple_cnn')
+            architecture: Model architecture
             pretrained: Whether to use pretrained ImageNet weights
+            learning_rate: Initial learning rate for optimizer
+            pos_weight: Positive class weight for binary classification
+            binary_classification: Whether this is binary classification
         """
         self.input_shape = input_shape
         self.num_classes = num_classes
         self.architecture = architecture.lower()
         self.pretrained = pretrained
+        self.learning_rate = learning_rate
+        self.pos_weight = pos_weight
+        self.binary_classification = binary_classification
         self.model = None
         self.base_model = None
-        
-        # Build the model
-        self._build_model()
     
-    def _build_model(self):
-        """Build the CNN model based on specified architecture."""
-        
-        if self.architecture == 'simple_cnn':
-            self.model = self._build_simple_cnn()
-        elif self.architecture == 'resnet50':
-            self.model = self._build_resnet50()
-        elif self.architecture == 'vgg16':
-            self.model = self._build_vgg16()
-        elif self.architecture == 'inception_v3':
-            self.model = self._build_inception_v3()
-        elif self.architecture == 'efficientnet':
-            self.model = self._build_efficientnet()
-        else:
-            raise ValueError(f"Unknown architecture: {self.architecture}")
-        
-        # Compile the model
-        self._compile_model()
-    
-    def _build_simple_cnn(self):
+    def build_simple_cnn(self, dropout_rate=0.5):
         """Build a simple CNN for testing (not for production)."""
-        model = models.Sequential([
+        self.model = models.Sequential([
             layers.Input(shape=self.input_shape),
             
             # Conv Block 1
@@ -82,19 +66,20 @@ class SkinLesionCNN:
             # Dense layers
             layers.GlobalAveragePooling2D(),
             layers.Dense(256, activation='relu'),
-            layers.Dropout(0.5),
+            layers.Dropout(dropout_rate),
             layers.Dense(128, activation='relu'),
-            layers.Dropout(0.5),
+            layers.Dropout(dropout_rate),
             
             # Output layer (binary classification)
             layers.Dense(1, dtype='float32', activation='sigmoid')
         ])
         
-        return model
+        self._compile_model()
+        return self.model
     
-    def _build_resnet50(self):
+    def build_resnet50(self, pretrained=True, fine_tune_layers=50):
         """Build ResNet50 with transfer learning."""
-        weights = 'imagenet' if self.pretrained else None
+        weights = 'imagenet' if pretrained else None
         
         # Load base model
         self.base_model = ResNet50(
@@ -121,12 +106,13 @@ class SkinLesionCNN:
         # Output layer (binary classification with float32)
         outputs = layers.Dense(1, dtype='float32', activation='sigmoid')(x)
         
-        model = keras.Model(inputs, outputs)
-        return model
+        self.model = keras.Model(inputs, outputs)
+        self._compile_model()
+        return self.model
     
-    def _build_vgg16(self):
+    def build_vgg16(self, pretrained=True):
         """Build VGG16 with transfer learning."""
-        weights = 'imagenet' if self.pretrained else None
+        weights = 'imagenet' if pretrained else None
         
         # Load base model
         self.base_model = VGG16(
@@ -153,16 +139,13 @@ class SkinLesionCNN:
         # Output layer
         outputs = layers.Dense(1, dtype='float32', activation='sigmoid')(x)
         
-        model = keras.Model(inputs, outputs)
-        return model
+        self.model = keras.Model(inputs, outputs)
+        self._compile_model()
+        return self.model
     
-    def _build_inception_v3(self):
+    def build_inception_v3(self, pretrained=True):
         """Build InceptionV3 with transfer learning."""
-        weights = 'imagenet' if self.pretrained else None
-        
-        # InceptionV3 requires input shape of at least 75x75
-        if self.input_shape[0] < 75 or self.input_shape[1] < 75:
-            raise ValueError("InceptionV3 requires input shape >= 75x75")
+        weights = 'imagenet' if pretrained else None
         
         # Load base model
         self.base_model = InceptionV3(
@@ -189,12 +172,13 @@ class SkinLesionCNN:
         # Output layer
         outputs = layers.Dense(1, dtype='float32', activation='sigmoid')(x)
         
-        model = keras.Model(inputs, outputs)
-        return model
+        self.model = keras.Model(inputs, outputs)
+        self._compile_model()
+        return self.model
     
-    def _build_efficientnet(self):
+    def build_efficientnet(self, pretrained=True):
         """Build EfficientNet with transfer learning (v1/v2 compatible)."""
-        weights = 'imagenet' if self.pretrained else None
+        weights = 'imagenet' if pretrained else None
         
         # Try EfficientNetB0 (v1) first, fall back to v2
         try:
@@ -233,8 +217,9 @@ class SkinLesionCNN:
         # Output layer
         outputs = layers.Dense(1, dtype='float32', activation='sigmoid')(x)
         
-        model = keras.Model(inputs, outputs)
-        return model
+        self.model = keras.Model(inputs, outputs)
+        self._compile_model()
+        return self.model
     
     def _compile_model(self):
         """Compile the model with optimizer, loss, and metrics."""
@@ -242,7 +227,7 @@ class SkinLesionCNN:
         # Try AdamW first, fall back to Adam
         try:
             optimizer = keras.optimizers.AdamW(
-                learning_rate=0.0001,
+                learning_rate=self.learning_rate,
                 weight_decay=1e-4
             )
         except (AttributeError, TypeError):
@@ -250,12 +235,12 @@ class SkinLesionCNN:
                 # Try tensorflow_addons
                 import tensorflow_addons as tfa
                 optimizer = tfa.optimizers.AdamW(
-                    learning_rate=0.0001,
+                    learning_rate=self.learning_rate,
                     weight_decay=1e-4
                 )
             except ImportError:
                 # Fall back to standard Adam
-                optimizer = keras.optimizers.Adam(learning_rate=0.0001)
+                optimizer = keras.optimizers.Adam(learning_rate=self.learning_rate)
                 print("AdamW not available, using Adam optimizer")
         
         # Binary classification metrics
@@ -280,10 +265,13 @@ class SkinLesionCNN:
         Args:
             num_layers: Number of layers to unfreeze from the end
             learning_rate: Learning rate for fine-tuning (should be lower)
+        
+        Returns:
+            success: True if unfreezing was successful
         """
         if self.base_model is None:
             print("No base model to unfreeze (using simple_cnn?)")
-            return
+            return False
         
         # Unfreeze the base model
         self.base_model.trainable = True
@@ -333,14 +321,36 @@ class SkinLesionCNN:
         )
         
         print(f"Recompiled with learning_rate={learning_rate}")
+        return True
     
     def get_model(self):
         """Return the compiled model."""
         return self.model
     
+    def get_model_info(self):
+        """Get model information including parameter counts."""
+        if self.model is None:
+            return {
+                'total_parameters': 0,
+                'trainable_parameters': 0,
+                'non_trainable_parameters': 0
+            }
+        
+        trainable_count = sum([tf.keras.backend.count_params(w) for w in self.model.trainable_weights])
+        non_trainable_count = sum([tf.keras.backend.count_params(w) for w in self.model.non_trainable_weights])
+        
+        return {
+            'total_parameters': trainable_count + non_trainable_count,
+            'trainable_parameters': trainable_count,
+            'non_trainable_parameters': non_trainable_count
+        }
+    
     def summary(self):
         """Print model summary."""
-        return self.model.summary()
+        if self.model:
+            return self.model.summary()
+        else:
+            print("Model not built yet. Call a build_* method first.")
 
 
 def create_ensemble_model(models_list, input_shape=(224, 224, 3)):

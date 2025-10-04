@@ -383,8 +383,8 @@ class ModelTrainer:
         """Evaluate the model on test data."""
         print("Evaluating model on test data...")
         
-        # Calculate test steps
-        test_steps = self.test_gen.samples // self.config['batch_size']
+        # Use test_steps calculated during setup
+        test_steps = self.test_steps
         
         # Evaluate model
         test_results = self.model.evaluate(
