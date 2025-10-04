@@ -126,9 +126,9 @@ Thumbs.db
 # Kaggle API
 .kaggle/
 
-# Model checkpoints
+# Model checkpoints (ignore saved models, not source code)
 checkpoints/
-models/
+outputs/models/
 *.ckpt
 *.pth
 *.pt
