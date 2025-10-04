@@ -536,8 +536,6 @@ class ModelTrainer:
         arch_path = self.models_dir / f"{self.config['architecture']}_architecture.json"
         with open(arch_path, 'w') as f:
             json.dump(self.model.to_json(), f, indent=2)
-        
-        return model_path
     
     def run_training_pipeline(self):
         """Run the complete training pipeline with optional two-phase fine-tuning."""
