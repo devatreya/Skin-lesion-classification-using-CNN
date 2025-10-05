@@ -616,7 +616,12 @@ class ModelTrainer:
         print("="*50)
         print(f"Model saved to: {model_path}")
         print(f"Results saved to: {self.output_dir}")
-        print(f"Test accuracy: {test_results.get('accuracy', 'N/A'):.4f}")
+        
+        # Print test metrics if available
+        if test_results and 'accuracy' in test_results:
+            print(f"Test accuracy: {test_results['accuracy']:.4f}")
+        if test_results and 'loss' in test_results:
+            print(f"Test loss: {test_results['loss']:.4f}")
         
         return test_results
 
