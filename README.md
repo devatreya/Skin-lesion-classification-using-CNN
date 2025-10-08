@@ -2,11 +2,11 @@
 
 A comprehensive deep learning project for classifying skin lesions as benign or malignant using Convolutional Neural Networks (CNNs). This project includes data preprocessing, multiple CNN architectures, training pipelines, evaluation metrics, and visualization tools.
 
-## 🎯 Project Overview
+## Project Overview
 
 This project implements a complete pipeline for skin lesion classification using the HAM10000 dataset, which contains 10,000 dermoscopic images of 7 different types of skin lesions. The main goal is to distinguish between benign and malignant lesions using state-of-the-art CNN architectures.
 
-## 📁 Dataset Structure
+## Dataset Structure
 
 After downloading the HAM10000 dataset, organize it as follows:
 
@@ -32,7 +32,7 @@ data/
 - `sex`: Patient sex
 - `localization`: Anatomical location
 
-## 🤗 Pre-trained Model
+## Pre-trained Model
 
 The trained ResNet50 model is available on Hugging Face:
 
@@ -66,7 +66,7 @@ print(f"{'Malignant' if prediction >= 0.5 else 'Benign'} (probability: {predicti
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -159,7 +159,7 @@ evaluator = ModelEvaluator('outputs/models/resnet50_best.h5')
 "
 ```
 
-## 🏗️ Model Architecture
+## Model Architecture
 
 ### ResNet50 with Custom Classification Head
 
@@ -287,7 +287,7 @@ The project also supports these architectures for comparison:
 - State-of-the-art efficiency
 - Best accuracy-to-parameters ratio
 
-## 📊 Features
+## Features
 
 ### Data Preprocessing
 - **Image resizing** to 224x224 pixels
@@ -369,7 +369,7 @@ visualizer = AttentionVisualizer(model)
 attention_results = visualizer.visualize_attention(img_array)
 ```
 
-## 📈 Training Results
+## Training Results
 
 ### 25-Epoch ResNet50 Performance
 
@@ -387,20 +387,11 @@ The trained model achieved the following metrics on the held-out test set (1,505
 | **Recall** | 0.8056 | Catches 80% of actual malignant cases |
 
 **Clinical Interpretation:**
-- ✅ **High Recall (80.56%)**: Model successfully identifies most malignant lesions, crucial for medical screening
-- ⚠️ **Moderate Precision (51.21%)**: Some benign lesions flagged as malignant (acceptable for screening, reduces missed cancers)
-- ✅ **Strong ROC-AUC (0.89)**: Excellent overall discrimination between benign and malignant
-- ✅ **Good PR-AUC (0.66)**: Robust performance despite 4:1 class imbalance
-
-#### Training History
-
-![Training History](outputs/plots/resnet50_training_history.png)
-
-**Key Observations:**
-- **Steady convergence**: Both training and validation metrics improved consistently
-- **No overfitting**: Validation PR-AUC closely tracked training PR-AUC
-- **Best epoch**: Epoch 21 with validation PR-AUC = 0.7221
-- **Training time**: ~4.5 hours on Intel Core i5-12500H (CPU only)
+- **High Recall (80.56%)**: Model successfully identifies most malignant lesions, crucial for medical screening
+- **Moderate Precision (51.21%)**: Some benign lesions flagged as malignant (acceptable for screening, reduces missed cancers)
+- **Strong ROC-AUC (0.89)**: Excellent overall discrimination between benign and malignant
+- **Good PR-AUC (0.66)**: Robust performance despite 4:1 class imbalance
+- **Training time**: ~4.5 hours on Intel Core i5-12500H (CPU only), 25 epochs
 
 #### Confusion Matrix Analysis
 
@@ -426,7 +417,7 @@ With the HAM10000 dataset, you can expect:
 | InceptionV3 | 80-82% | 0.87-0.89 | 4-5 hours (CPU) |
 | EfficientNet | 82-84% | 0.89-0.91 | 5-6 hours (CPU) |
 
-## 🛠️ Advanced Usage
+## Advanced Usage
 
 ### Custom Configuration
 
@@ -455,7 +446,7 @@ models = [model1, model2, model3]
 ensemble = create_ensemble_model(models)
 ```
 
-## 📋 Requirements
+## Requirements
 
 - Python 3.8+
 - TensorFlow 2.12+
@@ -465,7 +456,7 @@ ensemble = create_ensemble_model(models)
 - Kaggle API (for data download)
 - Optuna (for hyperparameter tuning)
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -473,18 +464,18 @@ ensemble = create_ensemble_model(models)
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [HAM10000 Dataset](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000)
 - [ISIC Archive](https://challenge.isic-archive.com/)
 - TensorFlow/Keras team
 - Medical imaging research community
 
-## 📞 Support
+## Support
 
 If you encounter any issues or have questions:
 
@@ -492,7 +483,7 @@ If you encounter any issues or have questions:
 2. Create a new issue with detailed description
 3. Contact the maintainers
 
-## 🔬 Research Applications
+## Research Applications
 
 This project can be used for:
 - Medical image analysis research
