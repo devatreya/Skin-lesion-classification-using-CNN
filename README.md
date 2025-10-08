@@ -393,6 +393,12 @@ The trained model achieved the following metrics on the held-out test set (1,505
 - **Good PR-AUC (0.66)**: Robust performance despite 4:1 class imbalance
 - **Training time**: ~4.5 hours on Intel Core i5-12500H (CPU only), 25 epochs
 
+#### Training History
+
+![Training History](assets/training_history.png)
+
+The plot shows steady convergence across 25 epochs with no signs of overfitting. Training and validation metrics (loss, accuracy, PR-AUC) track closely, indicating good generalization.
+
 #### Confusion Matrix Analysis
 
 At the default 0.5 threshold:

@@ -141,6 +141,10 @@ outputs/models/
 *.svg
 *.pdf
 
+# Exception: Keep README assets
+!assets/*.png
+!assets/*.jpg
+
 # Data analysis outputs
 analysis/
 results/
