@@ -38,41 +38,81 @@ The trained ResNet50 model is available on Hugging Face:
 
 **[devatreya/skin-lesion-resnet50](https://huggingface.co/devatreya/skin-lesion-resnet50)**
 
-### Quick Download and Use
+### Download and Run the Model
 
+**Step 1: Install Dependencies**
+```bash
+pip install tensorflow huggingface_hub pillow numpy
+```
+
+**Step 2: Complete Inference Script**
 ```python
+# Import required libraries
 from huggingface_hub import hf_hub_download
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import preprocess_input
+from PIL import Image
 
 # Download model from Hugging Face
+print("Downloading model from Hugging Face...")
 model_path = hf_hub_download(
     repo_id="devatreya/skin-lesion-resnet50",
     filename="resnet50_best.h5"
 )
 
 # Load model
+print("Loading model...")
 model = tf.keras.models.load_model(model_path)
 
-# Inference on a single image
-img = image.load_img("path/to/lesion.jpg", target_size=(224, 224))
-img_array = preprocess_input(np.expand_dims(image.img_to_array(img), axis=0))
+# Preprocess image function
+def preprocess_image(image_path):
+    """Load and preprocess image for ResNet50"""
+    img = Image.open(image_path).convert('RGB')
+    img = img.resize((224, 224))
+    img_array = np.array(img, dtype=np.float32)
+    
+    # ResNet50 preprocessing (ImageNet/Caffe-style)
+    img_array = img_array[..., ::-1]  # RGB to BGR
+    mean = [103.939, 116.779, 123.68]
+    img_array[..., 0] -= mean[0]
+    img_array[..., 1] -= mean[1]
+    img_array[..., 2] -= mean[2]
+    
+    return np.expand_dims(img_array, axis=0)
+
+# Run inference
+image_path = "path/to/your/lesion_image.jpg"  # Change this
+img_array = preprocess_image(image_path)
 prediction = model.predict(img_array)[0][0]
 
-print(f"{'Malignant' if prediction >= 0.5 else 'Benign'} (probability: {prediction:.2%})")
+# Display result
+print(f"\n{'='*50}")
+print(f"Prediction: {'MALIGNANT' if prediction >= 0.5 else 'BENIGN'}")
+print(f"Confidence: {prediction:.2%}")
+print(f"{'='*50}")
 ```
+
+**Medical Disclaimer:** This model is for educational and research purposes only. Not for clinical use. All suspicious lesions must be evaluated by qualified medical professionals.
 
 ---
 
 ## Quick Start
 
+### Option 1: Use Pre-trained Model Only (Testing)
+
+If you just want to test the model without training:
+
+1. **Install dependencies**: `pip install tensorflow huggingface_hub pillow numpy`
+2. **Use the complete script above** - it downloads and runs the model automatically
+3. **Replace** `"path/to/your/lesion_image.jpg"` with your image path
+
+### Option 2: Train from Scratch (Full Pipeline)
+
 ### 1. Environment Setup
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/devatreya/Skin-lesion-classification-using-CNN.git
 cd Skin-lesion-classification-using-CNN
 
 # Create virtual environment
@@ -85,12 +125,23 @@ pip install -r requirements.txt
 
 ### 2. Download Dataset
 
+**Option A: Automatic Download (Recommended)**
 ```bash
-# Download HAM10000 dataset
+# Download HAM10000 dataset automatically
 python3 scripts/download_data.py
 ```
 
-**Note**: You'll need to download the dataset manually from [Kaggle](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000) and place it in the `data/` folder.
+**Option B: Manual Download**
+1. Download from [Kaggle HAM10000](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000)
+2. Extract to `data/` folder:
+   ```
+   data/
+   ├── HAM10000_images_part_1/
+   ├── HAM10000_images_part_2/
+   └── HAM10000_metadata.csv
+   ```
+
+**Expected Result**: ~5GB of dermoscopic images and metadata in `data/` folder.
 
 ### 3. Prepare Lesion-Level Split
 
@@ -99,7 +150,9 @@ python3 scripts/download_data.py
 python3 scripts/prepare_data_split.py
 ```
 
-This creates `data/labels_binary_split.csv` and `data/split_metadata.json`.
+**Expected Output**: 
+- `data/labels_binary_split.csv` (train/val/test assignments)
+- `data/split_metadata.json` (split statistics)
 
 ### 4. Data Exploration (Optional)
 
@@ -114,13 +167,19 @@ python3 src/preprocessing/data_exploration.py
 # Quick test (3 epochs, SimpleCNN)
 python3 scripts/train_model.py --architecture simple_cnn --epochs 3 --batch_size 32
 
-# Full training (ResNet50, 20 epochs) - RECOMMENDED
-python3 scripts/train_model.py --architecture resnet50 --epochs 20 --batch_size 32
+# Full training (ResNet50, 25 epochs) - RECOMMENDED
+python3 scripts/train_model.py --architecture resnet50 --epochs 25 --batch_size 16
 
 # Train with different architectures
-python3 scripts/train_model.py --architecture vgg16 --epochs 20
-python3 scripts/train_model.py --architecture efficientnet --epochs 20
+python3 scripts/train_model.py --architecture vgg16 --epochs 25 --batch_size 16
+python3 scripts/train_model.py --architecture efficientnet --epochs 25 --batch_size 16
 ```
+
+**Expected Output**:
+- `outputs/models/resnet50_best.h5` (trained model)
+- `outputs/logs/resnet50_training.csv` (training metrics)
+- `outputs/plots/resnet50_training_history.png` (training visualization)
+- Test results printed to console
 
 ### 6. Tune Classification Threshold
 
@@ -129,7 +188,7 @@ python3 scripts/train_model.py --architecture efficientnet --epochs 20
 python3 scripts/tune_threshold.py --run_dir outputs --target_sensitivity 0.90
 ```
 
-This generates `outputs/threshold.json` with optimal operating point.
+**Expected Output**: `outputs/threshold.json` with optimal operating point and sensitivity/specificity analysis.
 
 ### 7. Run Inference
 
