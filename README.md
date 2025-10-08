@@ -6,38 +6,65 @@ A comprehensive deep learning project for classifying skin lesions as benign or 
 
 This project implements a complete pipeline for skin lesion classification using the HAM10000 dataset, which contains 10,000 dermoscopic images of 7 different types of skin lesions. The main goal is to distinguish between benign and malignant lesions using state-of-the-art CNN architectures.
 
-## 📁 Project Structure
+## 📁 Dataset Structure
+
+After downloading the HAM10000 dataset, organize it as follows:
 
 ```
-Skin-lesion-classification-using-CNN/
-├── data/                           # Dataset directory
-│   ├── HAM10000_images_part_1/     # Image data part 1
-│   ├── HAM10000_images_part_2/     # Image data part 2
-│   └── HAM10000_metadata.csv       # Dataset metadata
-├── src/                            # Source code
-│   ├── models/                     # CNN model implementations
-│   │   ├── cnn_models.py          # Model architectures
-│   │   ├── evaluation.py          # Evaluation metrics
-│   │   └── hyperparameter_tuning.py # Hyperparameter optimization
-│   ├── preprocessing/              # Data preprocessing
-│   │   ├── data_exploration.py    # Data analysis
-│   │   └── data_preprocessing.py  # Data pipeline
-│   └── visualization/              # Visualization tools
-│       └── attention_maps.py      # Attention visualization
-├── scripts/                        # Executable scripts
-│   ├── download_data.py           # Data download
-│   ├── prepare_data_split.py      # Lesion-level data splitting
-│   ├── train_model.py             # Training orchestration
-│   ├── tune_threshold.py          # Threshold optimization
-│   └── infer.py                   # Production inference
-├── outputs/                        # Training outputs
-│   ├── models/                    # Saved models
-│   ├── logs/                      # Training logs
-│   └── plots/                     # Visualization plots
-├── requirements.txt               # Python dependencies
-├── setup.py                      # Package setup
-└── README.md                     # This file
+data/
+├── HAM10000_images_part_1/     # Dermoscopic images (part 1)
+│   ├── ISIC_0024306.jpg
+│   ├── ISIC_0024307.jpg
+│   └── ... (5000 images)
+├── HAM10000_images_part_2/     # Dermoscopic images (part 2)
+│   ├── ISIC_0029305.jpg
+│   ├── ISIC_0029306.jpg
+│   └── ... (5015 images)
+└── HAM10000_metadata.csv       # Image metadata and labels
 ```
+
+**HAM10000_metadata.csv columns:**
+- `image_id`: Unique image identifier
+- `lesion_id`: Lesion identifier (multiple images per lesion)
+- `dx`: Diagnosis (7 types: nv, mel, bkl, bcc, akiec, vasc, df)
+- `dx_type`: Diagnosis confidence level
+- `age`: Patient age
+- `sex`: Patient sex
+- `localization`: Anatomical location
+
+## 🤗 Pre-trained Model
+
+The trained ResNet50 model is available on Hugging Face:
+
+**[devatreya/skin-lesion-resnet50](https://huggingface.co/devatreya/skin-lesion-resnet50)**
+
+### Quick Download and Use
+
+```python
+from huggingface_hub import hf_hub_download
+import tensorflow as tf
+import numpy as np
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.resnet50 import preprocess_input
+
+# Download model from Hugging Face
+model_path = hf_hub_download(
+    repo_id="devatreya/skin-lesion-resnet50",
+    filename="resnet50_best.h5"
+)
+
+# Load model
+model = tf.keras.models.load_model(model_path)
+
+# Inference on a single image
+img = image.load_img("path/to/lesion.jpg", target_size=(224, 224))
+img_array = preprocess_input(np.expand_dims(image.img_to_array(img), axis=0))
+prediction = model.predict(img_array)[0][0]
+
+print(f"{'Malignant' if prediction >= 0.5 else 'Benign'} (probability: {prediction:.2%})")
+```
+
+---
 
 ## 🚀 Quick Start
 
@@ -109,15 +136,13 @@ This generates `outputs/threshold.json` with optimal operating point.
 ```bash
 # Single image prediction
 python3 scripts/infer.py \
-  --model outputs/models/resnet50_final.h5 \
-  --config outputs/training_config.json \
+  --model outputs/models/resnet50_best.h5 \
   --threshold outputs/threshold.json \
   --image test_image.jpg
 
 # Batch prediction
 python3 scripts/infer.py \
-  --model outputs/models/resnet50_final.h5 \
-  --config outputs/training_config.json \
+  --model outputs/models/resnet50_best.h5 \
   --threshold outputs/threshold.json \
   --image_dir test_images/ \
   --output predictions.csv
@@ -134,33 +159,132 @@ evaluator = ModelEvaluator('outputs/models/resnet50_best.h5')
 "
 ```
 
-## 🏗️ Model Architectures
+## 🏗️ Model Architecture
 
-The project supports multiple CNN architectures:
+### ResNet50 with Custom Classification Head
 
-### 1. **Simple CNN**
-- Custom architecture with 4 convolutional blocks
-- Batch normalization and dropout for regularization
-- Global average pooling and dense layers
+This project uses **ResNet50** pre-trained on ImageNet as the backbone, with a custom classification head optimized for binary skin lesion classification (benign vs. malignant).
 
-### 2. **ResNet50** (Recommended)
-- Pre-trained on ImageNet
-- Transfer learning with fine-tuning
-- Excellent performance for medical imaging
+#### Architecture Overview
 
-### 3. **VGG16**
-- Pre-trained VGG16 architecture
-- Good baseline for comparison
-- Simpler than ResNet but effective
+**Base Model: ResNet50 (Pre-trained on ImageNet)**
+- **Total Layers**: 175
+- **Input Shape**: 224×224×3 RGB images
+- **Preprocessing**: ImageNet normalization (Caffe-style)
+- **Architecture**: Residual blocks with skip connections for deep feature learning
 
-### 4. **InceptionV3**
-- Pre-trained Inception architecture
+**ResNet50 Structure:**
+```
+Input (224×224×3)
+    ↓
+Conv1 → BatchNorm → ReLU → MaxPooling
+    ↓
+ResNet Block 1 (3 conv layers + skip) × 3 repetitions
+    ↓
+ResNet Block 2 (4 conv layers + skip) × 4 repetitions
+    ↓
+ResNet Block 3 (6 conv layers + skip) × 6 repetitions
+    ↓
+ResNet Block 4 (3 conv layers + skip) × 3 repetitions
+    ↓
+Global Average Pooling
+    ↓
+[Custom Classification Head]
+```
+
+#### Custom Classification Head
+
+After the ResNet50 backbone's Global Average Pooling layer:
+
+| Layer | Type | Units/Rate | Activation | Purpose |
+|-------|------|------------|------------|---------|
+| 1 | BatchNormalization | - | - | Stabilize backbone features |
+| 2 | Dropout | 0.5 | - | Prevent overfitting |
+| 3 | Dense | 512 | ReLU | High-level feature extraction |
+| 4 | BatchNormalization | - | - | Stabilize dense features |
+| 5 | Dropout | 0.5 | - | Additional regularization |
+| 6 | Dense | 256 | ReLU | Intermediate representation |
+| 7 | Dropout | 0.3 | - | Light regularization before output |
+| 8 | Dense | 1 | Sigmoid | Binary classification output |
+
+**Design Rationale:**
+- **Multiple dropout layers (0.5, 0.3)**: Combat overfitting on medical images, with lighter dropout near output
+- **BatchNormalization**: Stabilize training with frozen backbone layers
+- **Progressive dimension reduction (2048 → 512 → 256 → 1)**: Smooth feature abstraction
+- **Sigmoid activation**: Output probability for benign/malignant classification
+
+#### Model Parameters
+
+**Total Parameters**: 24,778,625
+- **Trainable**: 15,635,969 (63.1%)
+- **Non-trainable**: 9,142,656 (36.9%)
+
+#### Training Strategy
+
+> **Note**: The following describes the training-time strategy used to produce the model. These settings are not stored in the saved `.h5` file—only the final architecture and learned weights are preserved.
+
+**Two-Phase Fine-Tuning Approach:**
+
+**Phase 1: Train Classification Head Only (Epochs 1-25)**
+- **Frozen Layers**: Entire ResNet50 backbone (145 layers)
+- **Trainable Layers**: Custom classification head only (8 layers)
+- **Learning Rate**: 1×10⁻⁴
+- **Optimizer**: AdamW (with weight decay)
+- **Objective**: Learn task-specific features without disrupting ImageNet weights
+
+**Phase 2: Fine-tune ResNet50 Backbone (If needed)**
+- **Unfrozen Layers**: Last 30 layers of ResNet50
+- **Learning Rate**: 1×10⁻⁵ (10× lower than Phase 1)
+- **Optimizer**: AdamW
+- **Objective**: Adapt deep features to skin lesion characteristics
+
+#### Loss Function & Class Imbalance Handling
+
+> **Note**: These are training-time configurations. The saved model contains the learned weights, but the loss function and class weights must be specified again if retraining.
+
+**Weighted Binary Cross-Entropy**
+- **Positive Class Weight**: 4.12
+- **Rationale**: Dataset has 4.12× more benign than malignant lesions
+- **Effect**: Prevents model from simply predicting "benign" for everything
+
+#### Training Configuration
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| **Batch Size** | 16 | Balance between GPU memory and gradient stability |
+| **Epochs** | 25 | Sufficient for convergence without overfitting |
+| **Learning Rate** | 1×10⁻⁴ | Standard for transfer learning with frozen backbone |
+| **Optimizer** | AdamW | Improved weight decay regularization |
+| **Loss** | Weighted BCE | Handle 4.12:1 class imbalance |
+
+#### Training Callbacks
+
+- **ModelCheckpoint**: Save best model based on validation PR-AUC
+- **EarlyStopping**: Stop if validation PR-AUC doesn't improve for 7 epochs
+- **ReduceLROnPlateau**: Reduce learning rate by 50% if plateau detected
+- **CSVLogger**: Log all metrics to CSV for analysis
+- **TensorBoard**: Real-time training visualization
+
+---
+
+### Other Supported Architectures
+
+The project also supports these architectures for comparison:
+
+**1. Simple CNN**
+- Custom 4-layer convolutional architecture
+- Good for baseline and debugging
+
+**2. VGG16**
+- Pre-trained VGG16 backbone
+- Simpler than ResNet, faster training
+
+**3. InceptionV3**
 - Multi-scale feature extraction
 - Good for diverse image characteristics
 
-### 5. **EfficientNet**
+**4. EfficientNet**
 - State-of-the-art efficiency
-- Pre-trained EfficientNetB0
 - Best accuracy-to-parameters ratio
 
 ## 📊 Features
@@ -245,15 +369,62 @@ visualizer = AttentionVisualizer(model)
 attention_results = visualizer.visualize_attention(img_array)
 ```
 
-## 📈 Expected Results
+## 📈 Training Results
 
-With the HAM10000 dataset and ResNet50 architecture, you can expect:
+### 25-Epoch ResNet50 Performance
 
-- **Training Accuracy**: 85-90%
-- **Validation Accuracy**: 80-85%
-- **Test Accuracy**: 78-83%
-- **ROC-AUC**: 0.85-0.90
-- **F1-Score**: 0.80-0.85
+The trained model achieved the following metrics on the held-out test set (1,505 unseen images):
+
+#### Test Set Performance (Unseen Data)
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| **Test Loss** | 0.4426 | Low loss indicates good calibration |
+| **Test Accuracy** | 81.59% | Correctly classifies 4 out of 5 lesions |
+| **ROC-AUC** | 0.8900 | Excellent discrimination ability |
+| **PR-AUC** | 0.6602 | Good performance despite class imbalance |
+| **Precision** | 0.5121 | 51% of "malignant" predictions are correct |
+| **Recall** | 0.8056 | Catches 80% of actual malignant cases |
+
+**Clinical Interpretation:**
+- ✅ **High Recall (80.56%)**: Model successfully identifies most malignant lesions, crucial for medical screening
+- ⚠️ **Moderate Precision (51.21%)**: Some benign lesions flagged as malignant (acceptable for screening, reduces missed cancers)
+- ✅ **Strong ROC-AUC (0.89)**: Excellent overall discrimination between benign and malignant
+- ✅ **Good PR-AUC (0.66)**: Robust performance despite 4:1 class imbalance
+
+#### Training History
+
+![Training History](outputs/plots/resnet50_training_history.png)
+
+**Key Observations:**
+- **Steady convergence**: Both training and validation metrics improved consistently
+- **No overfitting**: Validation PR-AUC closely tracked training PR-AUC
+- **Best epoch**: Epoch 21 with validation PR-AUC = 0.7221
+- **Training time**: ~4.5 hours on Intel Core i5-12500H (CPU only)
+
+#### Confusion Matrix Analysis
+
+At the default 0.5 threshold:
+- **True Negatives**: ~980 benign lesions correctly identified
+- **True Positives**: ~248 malignant lesions correctly identified
+- **False Positives**: ~236 benign lesions misclassified as malignant
+- **False Negatives**: ~60 malignant lesions missed
+
+**Trade-off**: The model prioritizes recall (catching malignant cases) over precision (avoiding false alarms), which is appropriate for medical screening applications.
+
+---
+
+### Expected Results for Other Architectures
+
+With the HAM10000 dataset, you can expect:
+
+| Architecture | Accuracy | ROC-AUC | Training Time |
+|--------------|----------|---------|---------------|
+| **ResNet50** (current) | 81-82% | 0.88-0.90 | 4-5 hours (CPU) |
+| Simple CNN | 65-70% | 0.70-0.75 | 1-2 hours (CPU) |
+| VGG16 | 78-80% | 0.85-0.87 | 3-4 hours (CPU) |
+| InceptionV3 | 80-82% | 0.87-0.89 | 4-5 hours (CPU) |
+| EfficientNet | 82-84% | 0.89-0.91 | 5-6 hours (CPU) |
 
 ## 🛠️ Advanced Usage
 
